@@ -4,7 +4,37 @@ import argparse                 # command-line arguments
 import numpy as np              # arrays + fast maths
 import pandas as pd             # CSV reading/writing + tables
 
+'''
+================================================================================
+0) What this code does
+================================================================================
 
+Wind-turbine blades are essentially wings. At each radius along the blade, the
+local section experiences a “relative wind” that depends on:
+  • The free-stream wind speed (V∞)
+  • How fast the rotor spins (Ω)
+  • How much the rotor slows the wind down (axial induction, a)
+  • How much the rotor adds swirl to the wake (tangential induction, a′)
+
+BEM combines two ideas:
+
+A) Blade Element (2D airfoil) theory:
+   - Split the blade into many small radial “elements”.
+   - For each element, compute the local inflow angle (φ) and angle of attack (α).
+   - Use airfoil polar data (CL(α), CD(α)) to compute aerodynamic forces.
+
+B) Momentum (actuator disc) theory:
+   - The rotor extracts momentum from the wind. This is captured through
+     induction factors a and a′.
+   - For each annular ring, the forces predicted by the blade element model
+     must be consistent with momentum theory.
+
+Because a and a′ affect the inflow angle φ (and therefore α, CL, CD, forces),
+we must solve each blade element iteratively:
+   guess (a, a′) → compute φ → compute α → lookup CL/CD → compute new (a, a′)
+   repeat until converged.
+
+'''
 # =============================================================================
 # 1) CSV loading 
 # =============================================================================
@@ -514,6 +544,8 @@ def main():
 
     ap.add_argument("--outdir", type=str, default="bem_outputs", #Change this if you want a different folder
                     help="Folder to save CSV outputs.")
+	ap.add_argument("--outNm", type=str, default="bem_summary.csv",
+					help="File to save CSV outputs to.")
 
     args = ap.parse_args()
 
@@ -537,10 +569,11 @@ def main():
     print(df.to_string(index=False, float_format=lambda x: f"{x:.4f}"))
 
     # Print where it saved
-    print(f"\nSaved summary CSV to: {Path(args.outdir) / 'bem_summary.csv'}")
+    print(f"\nSaved summary CSV to: {Path(args.outdir) / args.outNm}")
 
 
 if __name__ == "__main__":
     main()
+
 
 
