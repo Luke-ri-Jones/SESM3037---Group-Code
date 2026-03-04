@@ -3,6 +3,7 @@ from pathlib import Path         # filesystem paths (portable)
 import argparse                 # command-line arguments
 import numpy as np              # arrays + fast maths
 import pandas as pd             # CSV reading/writing + tables
+import matplotlib.pyplot as plt  # plotting
 
 '''
 ================================================================================
@@ -464,7 +465,7 @@ def solve_bem_point(
 # =============================================================================
 # 6) Verification sweep across wind speeds (Task 1e)
 # =============================================================================
-def verify(geom, polar, winds, tsr, pitch, n, outdir):
+def verify(geom, polar, winds, tsr, pitch, n, outdir, outNm):
     """
     geom   : geometry dict
     polar  : polar dict
@@ -505,7 +506,7 @@ def verify(geom, polar, winds, tsr, pitch, n, outdir):
         raise ValueError("Negative power found (unexpected for normal operation).")
 
     # Save summary CSV
-    df.to_csv(outdir / "bem_summary.csv", index=False)
+    df.to_csv(outdir / outNm, index=False)
 
     # Save one representative spanwise distribution (middle wind speed)
     Vmid = sorted(dists.keys())[len(dists) // 2]
@@ -529,9 +530,12 @@ def main():
                     default="RISO-A1-A18-Lift-Drag-Characteristics.csv",
                     help="Path to airfoil polar file (degree, CL, CD).")
 
-    ap.add_argument("--winds", type=float, nargs="+",
-                    default=[4, 6, 8, 10, 12, 14, 16],
-                    help="Wind speeds to run [m/s]. Example: --winds x, y, z")
+    ap.add_argument(
+        "--winds", type=float, nargs=3,
+        default=[4, 20, 0.25],
+        metavar=("V_MIN", "V_MAX", "V_STEP"),
+        help="Wind sweep as: V_MIN V_MAX V_STEP (inclusive). Example: --winds 4 16 1"
+    )
 
     ap.add_argument("--tsr", type=float, default=7.5,
                     help="Constant tip-speed ratio lambda = Omega*R/V [-].") #WE WILL BE CHANGING THIS ONCE DECIDED
@@ -544,10 +548,19 @@ def main():
 
     ap.add_argument("--outdir", type=str, default="bem_outputs", #Change this if you want a different folder
                     help="Folder to save CSV outputs.")
-	ap.add_argument("--outNm", type=str, default="bem_summary.csv",
-					help="File to save CSV outputs to.")
+    ap.add_argument("--outNm", type=str, default="bem_summary.csv",
+		    help="File to save CSV outputs to.")
 
     args = ap.parse_args()
+
+    # --- Convert [min,max,step] -> explicit wind list ---
+    Vmin, Vmax, Vstep = args.winds
+    if Vstep <= 0:
+        raise ValueError("--winds step must be > 0")
+    if Vmax < Vmin:
+        raise ValueError("--winds max must be >= min")
+
+    winds = np.arange(Vmin, Vmax + 0.5 * Vstep, Vstep).tolist()  # inclusive-ish
 
     # Load input files
     geom = load_geometry(args.geom)
@@ -557,11 +570,12 @@ def main():
     df = verify(
         geom=geom,
         polar=polar,
-        winds=args.winds,
+        winds=winds,
         tsr=args.tsr,
         pitch=args.pitch,
         n=args.n,
-        outdir=args.outdir
+        outdir=args.outdir,
+        outNm=args.outNm
     )
 
     # Print summary table
@@ -572,8 +586,52 @@ def main():
     print(f"\nSaved summary CSV to: {Path(args.outdir) / args.outNm}")
 
 
+    # =============================================================================
+    # 8) Quick plots 
+    # =============================================================================
+    fig, axs = plt.subplots(2, 2, figsize=(12, 8), sharex=True)
+    axs = axs.ravel()
+
+    x = df["V0_mps"]
+
+    # 1) Wind speed vs RPM
+    axs[0].plot(x, df["rpm"], marker="o")
+    axs[0].set_ylabel("Rotor speed [rpm]")
+    axs[0].grid(True)
+    axs[0].set_title("V0 vs RPM")
+
+    # 2) Wind speed vs Power
+    axs[1].plot(x, df["P_kW"], marker="o")
+    axs[1].set_ylabel("Power [kW]")
+    axs[1].grid(True)
+    axs[1].set_title("V0 vs Power")
+
+    # 3) Wind speed vs Torque (Q_Nm)
+    axs[2].plot(x, df["Q_Nm"], marker="o")
+    axs[2].set_xlabel("Wind speed V0 [m/s]")
+    axs[2].set_ylabel("Torque [N·m]")
+    axs[2].grid(True)
+    axs[2].set_title("V0 vs Torque (Q)")
+
+    # 4) Wind speed vs Thrust (optional but useful)
+    axs[3].plot(x, df["T_N"], marker="o")
+    axs[3].set_xlabel("Wind speed V0 [m/s]")
+    axs[3].set_ylabel("Thrust [N]")
+    axs[3].grid(True)
+    axs[3].set_title("V0 vs Thrust")
+
+    fig.suptitle("BEM summary vs wind speed (constant TSR)")
+    fig.tight_layout()
+
+    # Save plot image alongside your CSV outputs
+    plot_path = Path(args.outdir) / "bem_plots_4panel.png"
+    fig.savefig(plot_path, dpi=200)
+    print(f"Saved plots to: {plot_path}")
+
+    plt.show()
+    
+
 if __name__ == "__main__":
     main()
-
 
 
