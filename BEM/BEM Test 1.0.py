@@ -500,11 +500,11 @@ def main():
                     help="Path to airfoil polar file (degree, CL, CD).")
 
     ap.add_argument("--winds", type=float, nargs="+",
-                    default=[6, 8, 10, 12, 14],
-                    help="Wind speeds to run [m/s]. Example: --winds 6 8 10 12 14")
+                    default=[4, 6, 8, 10, 12, 14, 16],
+                    help="Wind speeds to run [m/s]. Example: --winds x, y, z")
 
     ap.add_argument("--tsr", type=float, default=7.5,
-                    help="Constant tip-speed ratio lambda = Omega*R/V [-].")
+                    help="Constant tip-speed ratio lambda = Omega*R/V [-].") #WE WILL BE CHANGING THIS ONCE DECIDED
 
     ap.add_argument("--pitch", type=float, default=0.0,
                     help="Collective pitch angle [deg].")
@@ -512,7 +512,7 @@ def main():
     ap.add_argument("--n", type=int, default=60,
                     help="Number of blade elements (annuli).")
 
-    ap.add_argument("--outdir", type=str, default="bem_outputs",
+    ap.add_argument("--outdir", type=str, default="bem_outputs", #Change this if you want a different folder
                     help="Folder to save CSV outputs.")
 
     args = ap.parse_args()
@@ -542,4 +542,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
