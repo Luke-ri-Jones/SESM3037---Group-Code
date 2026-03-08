@@ -10,7 +10,8 @@ import matplotlib.pyplot as plt
 UPDATE LOG
 ================================================================================
 
-v2.1 (current)
+v2.1 (current) - Luke Jones
+
   FIX 1 : Turns out we were using the last row of the polar data as the stall
            point, which is actually deep in post-stall territory (20 deg, not
            the real CL peak at 10 deg). That was messing up the Viterna
@@ -37,13 +38,15 @@ v2.1 (current)
            due to noise. Changed it to a warning print so we still get told
            about it but don't lose all the results.
 
-v2.0
-  - Added Convergence counter that prints out after each success Lines [359, 450-455]
+v2.0 - Luke Ryan
+
+  - Added Convergence counter that prints out after each success
     (Can create a file instead if print is too annoying)
-  - Changed def polar_lookup Lines [151-208] to include a Viterna-Corrigan extrapolation during startup/stalling
+  - Changed def polar_lookup to include a Viterna-Corrigan extrapolation during startup/stalling
     (Change AR value depending on turbine blade geometry)
     
-v1.0
+v1.0 - Luke Jones
+
   - Initial BEM implementation with Prandtl tip/hub loss and Buhl high-thrust
     correction.
 
@@ -1010,3 +1013,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
